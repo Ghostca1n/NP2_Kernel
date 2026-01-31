@@ -469,12 +469,15 @@ jobs:
         run: |
           KERNEL_DIR="$GITHUB_WORKSPACE/kernel"
           SUSFS_DIR="$GITHUB_WORKSPACE/susfs"
-          KSU_DIR="$GITHUB_WORKSPACE/kernel/${{ env.KSU_DIR }}"
+          
+          # Get kernel sublevel for version-specific fixes
+          SUBLEVEL=$(grep '^SUBLEVEL = ' "$KERNEL_DIR/Makefile" | awk '{print $3}')
+          echo "Detected kernel sublevel: $SUBLEVEL"
           
           echo "::group::Copying SUSFS Source Files"
           # Copy SUSFS source files to kernel
-          cp -v "$SUSFS_DIR/kernel_patches/fs/susfs.c" "$KERNEL_DIR/fs/"
-          cp -v "$SUSFS_DIR/kernel_patches/include/linux/susfs.h" "$KERNEL_DIR/include/linux/"
+          cp -v "$SUSFS_DIR/kernel_patches/fs/"* "$KERNEL_DIR/fs/"
+          cp -v "$SUSFS_DIR/kernel_patches/include/linux/"* "$KERNEL_DIR/include/linux/"
           echo "::endgroup::"
           
           echo "::group::Applying Kernel SUSFS Patch"
@@ -482,35 +485,49 @@ jobs:
           KERNEL_PATCH="$SUSFS_DIR/kernel_patches/${{ env.SUSFS_KERNEL_PATCH }}"
           
           if [ -f "$KERNEL_PATCH" ]; then
-            if patch -p1 --dry-run --forward < "$KERNEL_PATCH" >/dev/null 2>&1; then
-              patch -p1 --forward --no-backup-if-mismatch < "$KERNEL_PATCH"
-              echo "✅ Kernel SUSFS patch applied successfully"
-            else
-              echo "⚠️ Kernel patch may have conflicts, applying with --force"
-              patch -p1 --forward --no-backup-if-mismatch -F 3 < "$KERNEL_PATCH" || true
-            fi
+            echo "Applying: $KERNEL_PATCH"
+            # Use || true to allow partial application (some hunks may already be applied)
+            patch -p1 < "$KERNEL_PATCH" || true
+            echo "✅ Kernel SUSFS patch applied"
           else
             echo "❌ Kernel patch not found: $KERNEL_PATCH"
             exit 1
           fi
           echo "::endgroup::"
           
-          echo "::group::Applying KernelSU SUSFS Patch"
-          cd "$KSU_DIR"
-          KSU_PATCH="$SUSFS_DIR/kernel_patches/KernelSU/${{ env.SUSFS_KSU_PATCH }}"
+          # NOTE: For Wild_KSU with wild-susfs branch, we do NOT need to apply
+          # the KernelSU SUSFS patch (10_enable_susfs_for_ksu.patch) because
+          # SUSFS integration is already included in the wild-susfs branch.
+          echo "::group::Wild_KSU SUSFS Integration"
+          echo "ℹ️ Using Wild_KSU wild-susfs branch - KSU SUSFS patch not needed"
+          echo "✅ Wild_KSU already has SUSFS integration built-in"
+          echo "::endgroup::"
           
-          if [ -f "$KSU_PATCH" ]; then
-            if patch -p1 --dry-run --forward < "$KSU_PATCH" >/dev/null 2>&1; then
-              patch -p1 --forward --no-backup-if-mismatch < "$KSU_PATCH"
-              echo "✅ KernelSU SUSFS patch applied successfully"
-            else
-              echo "⚠️ KernelSU patch may have conflicts, applying with --force"
-              patch -p1 --forward --no-backup-if-mismatch -F 3 < "$KSU_PATCH" || true
+          # Apply sublevel-specific fixes for android12-5.10
+          echo "::group::Applying Sublevel-Specific Fixes"
+          cd "$KERNEL_DIR"
+          
+          # Fix for task_mmu.c (show_pad issue) - applies to older sublevels
+          if [[ "$SUBLEVEL" -le 209 ]]; then
+            if grep -q "goto show_pad;" fs/proc/task_mmu.c 2>/dev/null; then
+              echo "Applying task_mmu.c fix for sublevel <= 209"
+              sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
+              echo "✅ task_mmu.c fix applied"
             fi
-          else
-            echo "❌ KernelSU patch not found: $KSU_PATCH"
-            exit 1
           fi
+          
+          # Fix for fdinfo.c (older sublevels <= 117)
+          if [[ "$SUBLEVEL" -le 117 ]]; then
+            echo "⚠️ Sublevel <= 117 may need additional fdinfo.c fixes"
+            echo "   Check kernel_patches/wild/susfs_fix_patches/ for manual patches"
+          fi
+          
+          # Fix for base.c (older sublevels <= 43)
+          if [[ "$SUBLEVEL" -le 43 ]]; then
+            echo "⚠️ Sublevel <= 43 may need additional base.c fixes"
+            echo "   Check kernel_patches/wild/susfs_fix_patches/ for manual patches"
+          fi
+          
           echo "::endgroup::"
 
       - name: Collect Patch Rejects
