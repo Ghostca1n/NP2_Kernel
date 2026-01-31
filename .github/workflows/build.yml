@@ -156,7 +156,7 @@ env:
 jobs:
   build:
     name: Build Kernel
-    runs-on: ubuntu-latest
+    runs-on: f34f03729ff2
     timeout-minutes: 120
 
     steps:
@@ -263,32 +263,59 @@ jobs:
       - name: Setup AOSP Build Tools
         run: |
           echo "::group::Cloning AOSP Tools"
-          # Clone in parallel for speed
-          git clone --depth=1 -b "${{ env.AOSP_BRANCH }}" \
-            "${{ env.AOSP_MIRROR }}/kernel/prebuilts/build-tools" \
-            "$GITHUB_WORKSPACE/build-tools" &
-          PID1=$!
           
+          # Clone mkbootimg in parallel
           git clone --depth=1 -b "${{ env.AOSP_BRANCH }}" \
             "${{ env.AOSP_MIRROR }}/platform/system/tools/mkbootimg" \
-            "$GITHUB_WORKSPACE/mkbootimg" &
+            "$GITHUB_WORKSPACE/mkbootimg" || \
+            git clone --depth=1 -b main \
+              "${{ env.AOSP_MIRROR }}/platform/system/tools/mkbootimg" \
+              "$GITHUB_WORKSPACE/mkbootimg" &
+          PID1=$!
+          
+          # CRITICAL: Clone avbtool from platform/external/avb
+          # DO NOT use kernel/prebuilts/build-tools (has corrupt bytecode)
+          git clone --depth=1 \
+            "${{ env.AOSP_MIRROR }}/platform/external/avb" \
+            "$GITHUB_WORKSPACE/avb-tools" &
           PID2=$!
           
-          # Wait for both and check for errors
-          wait $PID1 || { echo "❌ Failed to clone build-tools"; exit 1; }
-          wait $PID2 || { echo "❌ Failed to clone mkbootimg"; exit 1; }
+          wait $PID1 || { echo "❌ Failed to clone mkbootimg"; exit 1; }
+          wait $PID2 || { echo "❌ Failed to clone avb-tools"; exit 1; }
+          
           echo "::endgroup::"
           
-          # Export paths
+          # Export updated paths
           {
-            echo "AVBTOOL=$GITHUB_WORKSPACE/build-tools/linux-x86/bin/avbtool"
             echo "MKBOOTIMG=$GITHUB_WORKSPACE/mkbootimg/mkbootimg.py"
             echo "UNPACK_BOOTIMG=$GITHUB_WORKSPACE/mkbootimg/unpack_bootimg.py"
-            echo "BOOT_SIGN_KEY=$GITHUB_WORKSPACE/build-tools/linux-x86/share/avb/testkey_rsa2048.pem"
+            echo "AVBTOOL=$GITHUB_WORKSPACE/avb-tools/avbtool.py"
+            echo "BOOT_SIGN_KEY=$GITHUB_WORKSPACE/avb-tools/test/data/testkey_rsa2048.pem"
           } >> "$GITHUB_ENV"
           
-          echo "$GITHUB_WORKSPACE/build-tools/linux-x86/bin" >> "$GITHUB_PATH"
+          echo "$GITHUB_WORKSPACE/avb-tools" >> "$GITHUB_PATH"
           
+          # Verify avbtool
+          echo "::group::Verify avbtool"
+          
+          AVBTOOL_FILE="$GITHUB_WORKSPACE/avb-tools/avbtool.py"
+          
+          if [ ! -f "$AVBTOOL_FILE" ]; then
+            echo "❌ avbtool.py not found!"
+            exit 1
+          fi
+          
+          chmod +x "$AVBTOOL_FILE"
+          python3 "$AVBTOOL_FILE" version
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ avbtool verified and working"
+          else
+            echo "❌ avbtool test failed"
+            exit 1
+          fi
+          
+          echo "::endgroup::"
           echo "✅ AOSP build tools ready"
 
       - name: Setup Custom Signing Key
@@ -296,7 +323,7 @@ jobs:
           CUSTOM_SIGN_KEY: ${{ secrets.BOOT_SIGN_KEY }}
         if: env.CUSTOM_SIGN_KEY != ''
         run: |
-          echo "$CUSTOM_SIGN_KEY" > "$GITHUB_WORKSPACE/build-tools/linux-x86/share/avb/testkey_rsa2048.pem"
+          echo "$CUSTOM_SIGN_KEY" > "$GITHUB_WORKSPACE/avb-tools/test/data/testkey_rsa2048.pem"
           echo "✅ Using custom boot signing key"
 
       # ========================================================================
@@ -815,11 +842,26 @@ jobs:
           cd "$GITHUB_WORKSPACE/bootimg-work"
           BOOT_DIR="$GITHUB_WORKSPACE/kernel/out/arch/${{ env.ARCH }}/boot"
           
+          # Pre-build verification
+          echo "::group::Pre-build Verification"
+          echo "AVBTOOL: $AVBTOOL"
+          
+          python3 "$AVBTOOL" version
+          if [ $? -ne 0 ]; then
+            echo "❌ avbtool verification failed before building"
+            exit 1
+          fi
+          echo "✅ avbtool ready"
+          echo "::endgroup::"
+          
           # Function to build and sign boot image
           build_boot_image() {
             local kernel="$1"
             local output="$2"
             
+            echo "Building: $output (kernel: $kernel)"
+            
+            # Create boot image
             python3 "$MKBOOTIMG" \
               --header_version 4 \
               --kernel "$BOOT_DIR/$kernel" \
@@ -828,12 +870,23 @@ jobs:
               --os_patch_level "${{ env.OS_PATCH_LEVEL }}" \
               --output "$output"
             
+            if [ $? -ne 0 ]; then
+              echo "❌ Failed to create boot image: $output"
+              exit 1
+            fi
+            
+            # Sign with avbtool - use python3 explicitly
             python3 "$AVBTOOL" add_hash_footer \
               --partition_name boot \
               --partition_size $((64 * 1024 * 1024)) \
               --image "$output" \
               --algorithm SHA256_RSA2048 \
               --key "$BOOT_SIGN_KEY"
+            
+            if [ $? -ne 0 ]; then
+              echo "❌ Failed to sign boot image: $output"
+              exit 1
+            fi
             
             local size=$(stat -c%s "$output")
             echo "✅ Built: $output ($((size / 1024 / 1024)) MB)"
@@ -844,6 +897,8 @@ jobs:
           build_boot_image "Image.gz" "boot-gz.img"
           build_boot_image "Image.lz4" "boot-lz4.img"
           echo "::endgroup::"
+          
+          echo "✅ All boot images created successfully"
 
       # ========================================================================
       # PHASE 7: PREPARE ARTIFACTS
