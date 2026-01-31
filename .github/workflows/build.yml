@@ -12,7 +12,7 @@
 #   - Detailed build summary with all component versions
 #
 # Sources:
-#   - Kernel: https://github.com/MiguVT/kernel_nothing_sm8475_github_actions
+#   - Kernel: https://github.com/MiguVT/kernel_nothing_sm8475_cleaned
 #   - KernelSU-Next: https://github.com/KernelSU-Next/KernelSU-Next (v3.0.1+)
 #   - SUSFS: https://gitlab.com/simonpunk/susfs4ksu (v2.0.0+)
 #
@@ -99,7 +99,7 @@ env:
   # ---------------------------------------------------------------------------
   # Kernel Source Configuration
   # ---------------------------------------------------------------------------
-  KERNEL_REPO: 'https://github.com/MiguVT/kernel_nothing_sm8475_github_actions.git'
+  KERNEL_REPO: 'https://github.com/MiguVT/kernel_nothing_sm8475_cleaned.git'
   KERNEL_DEFCONFIG: 'pong_defconfig'  # FIX #1: Correct defconfig for Nothing Phone 2 (Pong)
   
   # ---------------------------------------------------------------------------
