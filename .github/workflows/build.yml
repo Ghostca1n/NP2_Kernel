@@ -100,7 +100,7 @@ env:
   # Kernel Source Configuration
   # ---------------------------------------------------------------------------
   KERNEL_REPO: 'https://github.com/MiguVT/kernel_nothing_sm8475_cleaned.git'
-  KERNEL_DEFCONFIG: 'pong_defconfig'  # FIX #1: Correct defconfig for Nothing Phone 2 (Pong)
+  KERNEL_DEFCONFIG: 'vendor/meteoric_defconfig'  # FIX #1: Correct defconfig for Nothing Phone 2 (Pong)
   
   # ---------------------------------------------------------------------------
   # Target Device Information
@@ -332,6 +332,8 @@ jobs:
           else
             echo "❌ Defconfig NOT FOUND: ${{ env.KERNEL_DEFCONFIG }}"
             echo ""
+            echo "Available defconfigs in arch/${{ env.ARCH }}/configs/vendor/:"
+            ls -la "$KERNEL_DIR/arch/${{ env.ARCH }}/configs/vendor/" | grep defconfig || echo "No defconfigs found!"
             echo "Available defconfigs in arch/${{ env.ARCH }}/configs/:"
             ls -la "$KERNEL_DIR/arch/${{ env.ARCH }}/configs/" | grep defconfig || echo "No defconfigs found!"
             exit 1
