@@ -952,7 +952,7 @@ jobs:
             echo 'do.cleanuponabort=0'
             echo 'device.name1=Pong'
             echo 'device.name2=pong'
-            echo 'supported.versions=12-15'
+            echo 'supported.versions=12-16'
             echo 'supported.patchlevels='
             echo "'; }"
             echo ''
