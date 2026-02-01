@@ -155,7 +155,7 @@ Edit the defconfig or modify the "Configure Kernel" step in the workflow to add 
 ## 🐛 Troubleshooting
 
 ### Build fails at defconfig step
-- Check that `pong_defconfig` exists in the kernel source
+- Check that `vendor/meteoric_defconfig` exists in the kernel source
 - Verify the kernel branch is correct
 
 ### WildKSU not working after flash
