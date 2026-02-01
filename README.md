@@ -3,15 +3,15 @@
 [![Build Kernel](https://github.com/MiguVT/NP2_Kernel/actions/workflows/build.yml/badge.svg)](https://github.com/MiguVT/NP2_Kernel/actions/workflows/build.yml)
 ![Android 12+](https://img.shields.io/badge/Android-12+-green?logo=android)
 ![Kernel 5.10](https://img.shields.io/badge/Kernel-5.10-blue)
-![KernelSU-Next](https://img.shields.io/badge/KernelSU--Next-v3.0+-orange)
+![WildKSU](https://img.shields.io/badge/WildKSU-3.0.0-orange)
 
-Automated GitHub Actions workflow that builds a custom kernel for **Nothing Phone 2 (Pong)** with KernelSU-Next root solution and SUSFS root hiding baked right in.
+Automated GitHub Actions workflow that builds a custom kernel for **Nothing Phone 2 (Pong)** based on [Meteoric Kernel Cleaned](https://github.com/MiguVT/kernel_nothing_sm8475_cleaned), a fork based on [Meteoric Kernel](https://github.com/HELLBOY017/kernel_nothing_sm8475) but without the manual modification, allowing us to integrate [WildKSU](https://github.com/WildKernels/Wild_KSU) root solution and SUSFS root hiding baked right in.
 
 ---
 
 ## ✨ Features
 
-- **KernelSU-Next v3.0+** — Modern root solution with app-level control
+- **WildKSU 3.0.0** — Modern root solution with app-level control (KernelSU fork)
 - **SUSFS v2.0.0+** — Advanced root hiding for banking apps, games, etc.
 - **Signed boot images** — GKI-certified with proper AVB signing
 - **AnyKernel3 flashable zip** — Easy installation via custom recovery
@@ -27,7 +27,7 @@ Automated GitHub Actions workflow that builds a custom kernel for **Nothing Phon
 | Platform | SM8475 (Snapdragon 8+ Gen 1) |
 | Android | 12 (GKI) |
 | Kernel | 5.10.x |
-| Defconfig | `pong_defconfig` |
+| Defconfig | `vendor/meteoric_defconfig` |
 
 ---
 
@@ -45,7 +45,7 @@ Check the [Releases](../../releases) page for ready-to-flash builds.
 3. **Click "Run workflow"** and configure:
    - `kernel_branch`: Source branch (default: `clean`)
    - `os_patch_level`: Security patch date, e.g., `2025-12`
-   - `enable_kernelsu`: Toggle KernelSU-Next (default: ✅)
+   - `enable_kernelsu`: Toggle WildKSU (default: ✅)
    - `enable_susfs`: Toggle SUSFS hiding (default: ✅)
    - `build_type`: `release` or `debug`
 
@@ -100,7 +100,7 @@ fastboot reboot
 
 ### After Flashing
 
-1. Install [KernelSU Manager](https://github.com/KernelSU-Next/KernelSU-Next/releases) app
+1. Install [KernelSU Manager](https://github.com/tiann/KernelSU/releases) app
 2. Open the app — it should show "Working" status
 3. Grant root to your apps as needed
 4. (Optional) Configure SUSFS via the KernelSU Manager
@@ -115,8 +115,8 @@ fastboot reboot
 |-------|------|---------|-------------|
 | `kernel_branch` | string | `clean` | Kernel source branch to build |
 | `os_patch_level` | string | `2025-12` | Android security patch level (YYYY-MM) |
-| `ksu_version` | string | _(latest)_ | Specific KernelSU-Next version/commit |
-| `enable_kernelsu` | boolean | `true` | Include KernelSU-Next in build |
+| `ksu_version` | string | _(latest)_ | Specific WildKSU version/commit |
+| `enable_kernelsu` | boolean | `true` | Include WildKSU in build |
 | `enable_susfs` | boolean | `true` | Include SUSFS root hiding |
 | `build_type` | choice | `release` | Build optimization level |
 
@@ -158,7 +158,7 @@ Edit the defconfig or modify the "Configure Kernel" step in the workflow to add 
 - Check that `pong_defconfig` exists in the kernel source
 - Verify the kernel branch is correct
 
-### KernelSU not working after flash
+### WildKSU not working after flash
 - Ensure you're using the correct boot image for your slot
 - Try flashing via AnyKernel3 instead of fastboot
 - Check the KernelSU Manager app for detailed status
@@ -177,7 +177,8 @@ Edit the defconfig or modify the "Configure Kernel" step in the workflow to add 
 
 ## 📚 Resources
 
-- [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) — Root solution
+- [WildKSU](https://github.com/WildKernels/Wild_KSU) — Root solution (KernelSU-Next fork with better susfs support)
+- [KSU-Next](https://kernelsu-next.github.io/webpage/) — The base KernelSU-Next project
 - [SUSFS](https://gitlab.com/simonpunk/susfs4ksu) — Root hiding patches
 - [AnyKernel3](https://github.com/osm0sis/AnyKernel3) — Flashable zip creator
 - [Nothing Phone 2 XDA](https://forum.xda-developers.com/f/nothing-phone-2.12767/) — Community support
@@ -186,7 +187,7 @@ Edit the defconfig or modify the "Configure Kernel" step in the workflow to add 
 
 ## 🙏 Credits
 
-- **KernelSU-Next Team** — For the amazing root solution
+- **WildKernels Team** — For WildKSU root solution
 - **simonpunk** — For SUSFS root hiding
 - **osm0sis** — For AnyKernel3
 - **Nothing** — For making a great phone
