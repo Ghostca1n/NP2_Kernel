@@ -124,9 +124,10 @@ env:
   # ---------------------------------------------------------------------------
   # Note: wild-susfs branch has SUSFS base integration but kernel patches
   # still need to be applied manually from the SUSFS repository
-  WILD_KSU_SETUP_URL: 'https://raw.githubusercontent.com/WildKernels/Wild_KSU/wild/kernel/setup.sh'
-  WILD_KSU_REPO_URL: 'https://github.com/WildKernels/Wild_KSU'
-  WILD_KSU_BRANCH: 'wild-susfs'
+  WILD_KSU_SETUP_URL: '"https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh"'
+  WILD_KSU_REPO_URL: 'https://github.com/ReSukiSU/ReSukiSU'
+  WILD_KSU_BRANCH: 'builtin'
+
   
   # ---------------------------------------------------------------------------
   # SUSFS Configuration
